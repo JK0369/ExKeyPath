@@ -3,10 +3,6 @@ import UIKit
 // MARK: - KVC
 class Person: NSObject { // NSObject 서브클래싱
   @objc var name: String? // @objc 어노테이션
-  var age = 1 {
-    willSet { print(newValue) }
-    didSet { print(oldValue) }
-  }
 }
 
 let person = Person()
@@ -25,6 +21,9 @@ person2.observe(\.name, options: [.old, .new]) { instance, change in
 person2.name = "fix" // 위에서 Optional(nil) Optional(Optional("fix")) 출력
 
 // MARK: - KeyPath
+
+person[keyPath: \Person.name]
+person[keyPath: \.name]
 
 var greeting = "Hello, playground"
 // 값을 참조하는게 아닌 프로퍼티를 참조하는 방법
@@ -63,5 +62,98 @@ extension School {
 print(school.getSchool(keyPath: \.kim))
 print(school.getSchool(keyPath: \.han))
 
-// ex2)
-let res1 = [kim, han].map(\.name)
+// MARK: - KeyPath sugar Example
+struct SomeModel {
+  let name: String
+  let age: Int
+}
+let someModel1 = SomeModel(name: "jake", age: 12)
+let someModel2 = SomeModel(name: "lee", age: 32)
+let someModel3: SomeModel? = SomeModel(name: "han", age: 20)
+let someModel4: SomeModel? = nil
+
+let res1 = [someModel1, someModel2].map(\.name)
+let res2 = [someModel3, someModel4].compactMap(\.?.name)
+
+struct MyModel: Codable {
+  let name: String
+}
+
+// MARK: - KeyPath sugar Exmaple 1
+/* 예시로 사용할 json
+{
+  "items":[
+     {
+        "name":"jake",
+        "age": 12
+     },
+     {
+        "name":"jake",
+        "age": 30
+     },
+  ]
+}
+*/
+
+// 사용하는쪽에서 keyPath x
+// map(MyResponseModel.self)
+struct MyResponseModel: Codable {
+  struct User: Codable {
+    let name: String
+    let age: Int
+  }
+  enum CodingKeys: String, CodingKey {
+    case users = "items"
+  }
+  let users: [User]
+}
+
+// 사용하는쪽에서 keyPath o
+// map([MyResponseModel2].self, atKeyPath: "items")
+struct MyResponseModel2: Codable {
+  let name: String
+  let age: Int
+}
+
+// MARK: - KeyPath sugar Exmaple 2
+/*
+ {
+    "profile":{
+       "user_id":"abcd",
+       "secret":{
+          "age":12
+       }
+    }
+ }
+ */
+
+// 사용하는쪽에서 keyPath x
+// map(MyResponseModel3.self)
+struct MyResponseModel3: Codable {
+  struct User: Codable {
+    struct Secret: Codable {
+      let age: Int
+    }
+    enum CodingKeys: String, CodingKey {
+      case userID = "user_id"
+      case age
+    }
+    let userID: String
+    let age: Int
+  }
+  let profile: [User]
+}
+
+// 사용하는쪽에서 keyPath o
+// map([MyResponseModel4].self, atKeyPath: "profile")
+struct MyResponseModel4: Codable {
+  struct Secret: Codable {
+    let age: Int
+  }
+  enum CodingKeys: String, CodingKey {
+    case userID = "user_id"
+    case age
+  }
+  let userID: String
+  let age: Int
+}
